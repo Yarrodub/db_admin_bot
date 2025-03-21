@@ -9,7 +9,8 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from log_config.settings import logging_config
 from config_data.bot_menu import set_menu
 from config_data.config_reader import get_config, BotConfig, DbConfig
-from middlewares import DbSessionMiddleware, TrackAllUsersMiddleware
+from middlewares import DbSessionMiddleware, AdminCheckMiddleware
+from db import get_admins_list
 
 from handlers import get_routers
 
@@ -35,9 +36,12 @@ async def main():
 
     sessionmaker = async_sessionmaker(engine, expire_on_commit=False)
 
-    dp = Dispatcher(admin_id=bot_config.admin_id)
+    async with sessionmaker.begin() as conn:
+        admins: list[int] = await get_admins_list(conn)
+
+    dp = Dispatcher(admins_id=admins)
     dp.update.outer_middleware(DbSessionMiddleware(sessionmaker))
-    dp.message.outer_middleware(TrackAllUsersMiddleware())
+    dp.update.outer_middleware(AdminCheckMiddleware(admins))
 
     dp.include_routers(*get_routers())
 
