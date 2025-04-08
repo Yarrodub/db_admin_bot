@@ -7,7 +7,7 @@ from logging import getLogger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lexicon.ru import answers
-from keyboards.inline_keyboards import create_orders_list_kb
+from keyboards.inline_keyboards import history_showing_kb
 from calculations.show_history import show_orders_page
 from objects.objects import FSMOrders
 # from db.requests import drop_table_transactions
@@ -32,10 +32,15 @@ async def help_command(message: Message) -> None:
 @router.message(Command(commands='orders'))
 async def history_command(message: Message, state: FSMContext, sessionmaker: AsyncSession) -> None:
     await state.set_state(FSMOrders.show)
-    page, pages_num, txt = await show_orders_page(sessionmaker)
+    page = await show_orders_page(sessionmaker, first=True)
     await message.answer(
-        text=txt,
-        reply_markup= create_orders_list_kb(page, pages_num).as_markup()
+        text=page.text_string,
+        reply_markup=history_showing_kb(
+            page.current_page,
+            page.pages_num,
+            page.first_order_num,
+            page.last_order_num)
+        .as_markup()
     )
     logger.info('User pressed command /orders')
 

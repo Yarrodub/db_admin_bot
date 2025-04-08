@@ -15,8 +15,11 @@ class AdminCheckMiddleware(BaseMiddleware):
             event: Update,
             data: Dict[str, Any]
     ) -> Any:
-        tg_id = event.message.from_user.id
+        try:
+            tg_id = event.message.from_user.id
+        except AttributeError:
+            tg_id = event.callback_query.from_user.id
         if tg_id in self.admins:
             return await handler(event, data)
         else:
-            pass
+            print(f'Not an admin {tg_id}')
